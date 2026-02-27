@@ -11,10 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: dawidd6/action-download-artifact@2536c51d3d126276eb39f74d6bc9c72ac6ef30d3 # v16
         with:
+          github_token: ${{ github.token }}
+          run_id: ${{ github.event.workflow_run.id }}
           name: test-artifact
           path: output
-          run-id: ${{ github.event.workflow_run.id }}
       - name: Verify
         run: cat output/output.txt
