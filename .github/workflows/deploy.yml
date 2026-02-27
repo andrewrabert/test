@@ -18,3 +18,12 @@ jobs:
         run: gh run download "$RUN_ID" -n test-artifact -D output
       - name: Verify
         run: cat output/output.txt
+      - name: Check secret access
+        env:
+          TEST_SAUCE: ${{ secrets.TEST_SAUCE }}
+        run: |
+          if [ -n "$TEST_SAUCE" ]; then
+            echo "SECRET IS AVAILABLE (length=${#TEST_SAUCE})"
+          else
+            echo "SECRET IS EMPTY - running in fork context"
+          fi
