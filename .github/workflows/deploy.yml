@@ -11,11 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@2536c51d3d126276eb39f74d6bc9c72ac6ef30d3 # v16
-        with:
-          github_token: ${{ github.token }}
-          run_id: ${{ github.event.workflow_run.id }}
-          name: test-artifact
-          path: output
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run download "$RUN_ID" -n test-artifact -D output
       - name: Verify
         run: cat output/output.txt
