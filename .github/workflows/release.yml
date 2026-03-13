@@ -10,14 +10,24 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Get tag annotation
+        id: tag-msg
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ref_json=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}")
+          tag_sha=$(echo "$ref_json" | jq -r '.object.sha')
+          tag_msg=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" --jq '.message')
+          echo "msg<<TAGEOF" >> "$GITHUB_OUTPUT"
+          echo "$tag_msg" >> "$GITHUB_OUTPUT"
+          echo "TAGEOF" >> "$GITHUB_OUTPUT"
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --title "$TAG" --notes-from-tag --latest=false
+          TAG_MSG: ${{ steps.tag-msg.outputs.msg }}
+        run: gh release create "$TAG" --title "$TAG" --notes "$TAG_MSG" --latest=false
 
   build:
     needs: create-release
@@ -52,6 +62,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: Compress-Archive -Path aweber -DestinationPath aweber-${{ matrix.target }}.zip
       - name: Upload artifact to release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
