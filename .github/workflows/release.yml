@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          tag_msg=$(git tag -l --format='%(contents)' "$TAG")
+          gh release create "$TAG" --title "$TAG" --notes "$tag_msg" --latest=false
+
+  build:
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create dummy binary
+        run: echo "dummy build for ${{ matrix.target }}" > aweber
+      - name: Package (unix)
+        if: matrix.os != 'windows-latest'
+        run: tar czf aweber-${{ matrix.target }}.tar.gz aweber
+      - name: Package (windows)
+        if: matrix.os == 'windows-latest'
+        run: Compress-Archive -Path aweber -DestinationPath aweber-${{ matrix.target }}.zip
+      - name: Upload artifact to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" aweber-*.tar.gz aweber-*.zip 2>/dev/null || gh release upload "$TAG" aweber-*.zip 2>/dev/null || gh release upload "$TAG" aweber-*.tar.gz
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Mark release as latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest
