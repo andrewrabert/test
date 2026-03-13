@@ -27,7 +27,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           TAG_MSG: ${{ steps.tag-msg.outputs.msg }}
-        run: gh release create "$TAG" --title "$TAG" --notes "$TAG_MSG" --latest=false
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases" \
+            -f tag_name="$TAG" \
+            -f name="$TAG" \
+            -f body="$TAG_MSG" \
+            -F draft=false \
+            -F prerelease=false
 
   build:
     needs: create-release
